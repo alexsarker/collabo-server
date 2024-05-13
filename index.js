@@ -15,7 +15,6 @@ app.get("/", (req, res) => {
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@clusterbase.o3yqpur.mongodb.net/?retryWrites=true&w=majority&appName=Clusterbase`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -28,14 +27,36 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    // Send a ping to confirm a successful connection
+    // // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+
+    const docCollection = client.db("CollaboDB").collection("assignment");
+
+    // create assignments
+    app.post("/create", async (req, res) => {
+      const createData = req.body;
+      console.log(createData);
+      const result = await docCollection.insertOne(createData);
+      res.send(result);
+    });
+
+    // view assignments
+    app.get("/create", async (req, res) => {
+      const result = await docCollection.find().toArray();
+      res.send(result);
+    });
+
+    
+
+
+
+
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
