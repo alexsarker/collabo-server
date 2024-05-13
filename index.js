@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
@@ -36,7 +36,7 @@ async function run() {
     const docCollection = client.db("CollaboDB").collection("assignment");
 
     // create assignments
-    app.post("/create", async (req, res) => {
+    app.post("/data", async (req, res) => {
       const createData = req.body;
       console.log(createData);
       const result = await docCollection.insertOne(createData);
@@ -44,16 +44,19 @@ async function run() {
     });
 
     // view assignments
-    app.get("/create", async (req, res) => {
+    app.get("/data", async (req, res) => {
       const result = await docCollection.find().toArray();
       res.send(result);
     });
 
-    
+    // view detail assignment
 
-
-
-
+    app.get("/data/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await docCollection.findOne(query);
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
