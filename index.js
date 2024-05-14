@@ -62,7 +62,6 @@ async function run() {
     // submit assignments
     app.post("/answers", async (req, res) => {
       const submitData = req.body;
-      //   console.log(submitData);
       const result = await submitCollection.insertOne(submitData);
       res.send(result);
     });
@@ -88,6 +87,34 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const update = { $set: gradeData };
       const result = await submitCollection.updateOne(query, update);
+      res.send(result);
+    });
+
+    // update button
+    app.put("/data/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateData = req.body;
+      const uData = {
+        $set: {
+          title: updateData.title,
+          level: updateData.level,
+          dueDate: updateData.dueDate,
+          totalMarks: updateData.totalMarks,
+          thumbnailURL: updateData.thumbnailURL,
+          description: updateData.description,
+        },
+      };
+      const result = await docCollection.updateOne(filter, uData, options);
+      res.send(result);
+    });
+
+    // delete button
+    app.delete("/data/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await docCollection.deleteOne(query);
       res.send(result);
     });
   } finally {
