@@ -34,6 +34,7 @@ async function run() {
     );
 
     const docCollection = client.db("CollaboDB").collection("assignment");
+    const submitCollection = client.db("CollaboDB").collection("answers");
 
     // create assignments
     app.post("/data", async (req, res) => {
@@ -55,6 +56,38 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await docCollection.findOne(query);
+      res.send(result);
+    });
+
+    // submit assignments
+    app.post("/answers", async (req, res) => {
+      const submitData = req.body;
+      //   console.log(submitData);
+      const result = await submitCollection.insertOne(submitData);
+      res.send(result);
+    });
+
+    // view submit assignments
+    app.get("/answers", async (req, res) => {
+      const result = await submitCollection.find().toArray();
+      res.send(result);
+    });
+
+    // view grade detail assignment
+    app.get("/answers/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await submitCollection.findOne(query);
+      res.send(result);
+    });
+
+    // view graded
+    app.patch("/answers/:id", async (req, res) => {
+      const id = req.params.id;
+      const gradeData = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = { $set: gradeData };
+      const result = await submitCollection.updateOne(query, update);
       res.send(result);
     });
   } finally {
