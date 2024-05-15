@@ -33,13 +33,11 @@ const client = new MongoClient(uri, {
 
 // middleware
 const logger = (req, res, next) => {
-  console.log(req.method, req.url);
   next();
 };
 
 const verifyToken = (req, res, next) => {
   const token = req?.cookies?.token;
-  console.log("middleware token:", token);
   if (!token) {
     return res.status(401).send({ message: "unauthorized access" });
   }
@@ -55,12 +53,12 @@ const verifyToken = (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.connect();
+    // // // Send a ping to confirm a successful connection
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
 
     const docCollection = client.db("CollaboDB").collection("assignment");
     const submitCollection = client.db("CollaboDB").collection("answers");
@@ -83,7 +81,6 @@ async function run() {
     // Logout
     app.post("/logout", async (req, res) => {
       const user = req.body;
-      console.log("logging out", user);
       res
         .clearCookie("token", { maxAge: 0, sameSite: "none", secure: true })
         .send({ success: true });
@@ -92,14 +89,12 @@ async function run() {
     // create assignments
     app.post("/data", async (req, res) => {
       const createData = req.body;
-      console.log(createData);
       const result = await docCollection.insertOne(createData);
       res.send(result);
     });
 
     // view assignments
     app.get("/data", logger, verifyToken, async (req, res) => {
-      console.log(req.user);
       const result = await docCollection.find().toArray();
       res.send(result);
     });
@@ -121,7 +116,6 @@ async function run() {
 
     // view submit assignments
     app.get("/answers", logger, verifyToken, async (req, res) => {
-      console.log(req.user);
       const result = await submitCollection.find().toArray();
       res.send(result);
     });
