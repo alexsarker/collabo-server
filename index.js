@@ -115,7 +115,7 @@ async function run() {
     });
 
     // view submit assignments
-    app.get("/answers", logger, verifyToken, async (req, res) => {
+    app.get("/answers", logger, async (req, res) => {
       const result = await submitCollection.find().toArray();
       res.send(result);
     });
