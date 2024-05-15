@@ -11,7 +11,8 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
-      // "http://localhost:5173",
+      "https://collabo-da545.web.app",
+      "https://collabo-da545.firebaseapp.com",
     ],
     credentials: true,
   })
@@ -96,7 +97,7 @@ async function run() {
     });
 
     // view assignments
-    app.get("/data", logger, verifyToken, async (req, res) => {
+    app.get("/data", logger, async (req, res) => {
       const result = await docCollection.find().toArray();
       res.send(result);
     });
