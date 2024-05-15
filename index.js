@@ -1,13 +1,21 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.send("Collabo is running.");
@@ -23,6 +31,27 @@ const client = new MongoClient(uri, {
   },
 });
 
+// middleware
+const logger = (req, res, next) => {
+  console.log(req.method, req.url);
+  next();
+};
+
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  console.log("middleware token:", token);
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -36,6 +65,30 @@ async function run() {
     const docCollection = client.db("CollaboDB").collection("assignment");
     const submitCollection = client.db("CollaboDB").collection("answers");
 
+    // auth related api
+    app.post("/jwt", logger, async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ success: true });
+    });
+
+    // Logout
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("logging out", user);
+      res
+        .clearCookie("token", { maxAge: 0, sameSite: "none", secure: true })
+        .send({ success: true });
+    });
+
     // create assignments
     app.post("/data", async (req, res) => {
       const createData = req.body;
@@ -45,14 +98,14 @@ async function run() {
     });
 
     // view assignments
-    app.get("/data", async (req, res) => {
+    app.get("/data", logger, verifyToken, async (req, res) => {
+      console.log(req.user);
       const result = await docCollection.find().toArray();
       res.send(result);
     });
 
     // view detail assignment
-
-    app.get("/data/:id", async (req, res) => {
+    app.get("/data/:id", logger, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await docCollection.findOne(query);
@@ -67,13 +120,14 @@ async function run() {
     });
 
     // view submit assignments
-    app.get("/answers", async (req, res) => {
+    app.get("/answers", logger, verifyToken, async (req, res) => {
+      console.log(req.user);
       const result = await submitCollection.find().toArray();
       res.send(result);
     });
 
     // view grade detail assignment
-    app.get("/answers/:id", async (req, res) => {
+    app.get("/answers/:id", logger, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await submitCollection.findOne(query);
@@ -81,7 +135,7 @@ async function run() {
     });
 
     // view graded
-    app.patch("/answers/:id", async (req, res) => {
+    app.patch("/answers/:id", logger, async (req, res) => {
       const id = req.params.id;
       const gradeData = req.body;
       const query = { _id: new ObjectId(id) };
@@ -118,7 +172,6 @@ async function run() {
       res.send(result);
     });
   } finally {
-
   }
 }
 run().catch(console.dir);
