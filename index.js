@@ -11,6 +11,7 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
+      "http://localhost:5173",
       "https://collabo-da545.web.app",
       "https://collabo-da545.firebaseapp.com",
     ],
@@ -33,6 +34,12 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+};
 
 // middleware
 const logger = (req, res, next) => {
@@ -69,23 +76,15 @@ async function run() {
     // auth related api
     app.post("/jwt", logger, async (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
-      });
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-        })
-        .send({ success: true });
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
+      res.cookie("token", token, cookieOptions).send({ success: true });
     });
 
     // Logout
     app.post("/logout", async (req, res) => {
       const user = req.body;
       res
-        .clearCookie("token", { maxAge: 0, sameSite: "none", secure: true })
+        .clearCookie("token", { ...cookieOptions, maxAge: 0 })
         .send({ success: true });
     });
 
@@ -97,13 +96,13 @@ async function run() {
     });
 
     // view assignments
-    app.get("/data", logger, async (req, res) => {
+    app.get("/data", async (req, res) => {
       const result = await docCollection.find().toArray();
       res.send(result);
     });
 
     // view detail assignment
-    app.get("/data/:id", logger, async (req, res) => {
+    app.get("/data/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await docCollection.findOne(query);
@@ -111,20 +110,20 @@ async function run() {
     });
 
     // submit assignments
-    app.post("/answers", async (req, res) => {
+    app.post("/answers", logger, async (req, res) => {
       const submitData = req.body;
       const result = await submitCollection.insertOne(submitData);
       res.send(result);
     });
 
     // view submit assignments
-    app.get("/answers", logger, async (req, res) => {
+    app.get("/answers", async (req, res) => {
       const result = await submitCollection.find().toArray();
       res.send(result);
     });
 
     // view grade detail assignment
-    app.get("/answers/:id", logger, async (req, res) => {
+    app.get("/answers/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await submitCollection.findOne(query);
@@ -132,7 +131,7 @@ async function run() {
     });
 
     // view graded
-    app.patch("/answers/:id", logger, async (req, res) => {
+    app.patch("/answers/:id", async (req, res) => {
       const id = req.params.id;
       const gradeData = req.body;
       const query = { _id: new ObjectId(id) };
